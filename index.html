@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <!-- Esta línea es clave para apps: bloquea el zoom y ajusta la pantalla -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tanteo App</title>
+    <style>
+        /* Desactiva la selección de texto y el sombreado al tocar para que parezca una app nativa */
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        
+        /* Permitimos seleccionar texto solo dentro de los inputs */
+        input {
+            -webkit-user-select: auto;
+            user-select: auto;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            /* Asegura que ocupe todo el alto de la pantalla del móvil */
+            min-height: 100vh;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 { font-size: 24px; color: #2c3e50; margin-top: 0; }
+        h2 { font-size: 20px; color: #2c3e50; margin-top: 0; }
+        
+        .screen { display: none; }
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 14px 10px;
+            margin: 5px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:active { background-color: #2980b9; transform: scale(0.98); }
+        
+        .btn-small { padding: 10px; font-size: 14px; width: auto; margin: 0; }
+        .btn-secondary { background-color: #95a5a6; }
+        .btn-secondary:active { background-color: #7f8c8d; }
+        .btn-danger { background-color: #e74c3c; }
+        .btn-danger:active { background-color: #c0392b; }
+        .btn-success { background-color: #2ecc71; font-size: 18px; margin-top: 20px; }
+        .btn-success:active { background-color: #27ae60; }
+        
+        .grid-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #34495e; font-size: 14px; }
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .player-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 5px solid #3498db;
+        }
+        .player-info { text-align: left; flex-grow: 1; }
+        .player-name { font-weight: bold; font-size: 16px; margin-bottom: 2px; }
+        .player-total { font-size: 13px; color: #7f8c8d; }
+        .player-total span { font-weight: bold; font-size: 18px; color: #2c3e50; }
+        
+        .round-input {
+            width: 70px;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="screen1" class="screen active">
+        <h1>Tanteo</h1>
+        <p>¿Cuántos juegan?</p>
+        <div id="playerButtons" class="grid-buttons"></div>
+    </div>
+
+    <div id="screen2" class="screen">
+        <div class="header-actions">
+            <button class="btn-small btn-secondary" onclick="showScreen(1)">⬅ Atrás</button>
+        </div>
+        <h2>Nombres</h2>
+        <div id="namesContainer"></div>
+        <button class="btn-success" onclick="goToScoreboard()">Continuar ➡</button>
+    </div>
+
+    <div id="screen3" class="screen">
+        <div class="header-actions">
+            <button class="btn-small btn-secondary" onclick="showScreen(2)">⬅ Atrás</button>
+            <button class="btn-small btn-danger" onclick="resetGame()">🏠 Inicio</button>
+        </div>
+        <h2>Puntuaciones</h2>
+        <div id="scoreboardContainer"></div>
+        <button class="btn-success" onclick="calculateScores()">Calcular Ronda ➕</button>
+    </div>
+</div>
+
+<script>
+    let numPlayers = 0;
+    let players = [];
+
+    window.onload = function() {
+        const buttonsContainer = document.getElementById('playerButtons');
+        for (let i = 2; i <= 12; i++) {
+            const btn = document.createElement('button');
+            btn.innerText = i + " Jugadores";
+            btn.onclick = () => selectNumPlayers(i);
+            buttonsContainer.appendChild(btn);
+        }
+    };
+
+    function showScreen(screenNumber) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('screen' + screenNumber).classList.add('active');
+        window.scrollTo(0, 0); // Sube al inicio al cambiar de pantalla
+    }
+
+    function selectNumPlayers(n) {
+        numPlayers = n;
+        if (players.length !== n) {
+            players = [];
+            for (let i = 0; i < n; i++) {
+                players.push({ name: `Jugador ${i+1}`, score: 0 });
+            }
+        }
+        renderNameInputs();
+        showScreen(2);
+    }
+
+    function renderNameInputs() {
+        const container = document.getElementById('namesContainer');
+        container.innerHTML = '';
+        for (let i = 0; i < numPlayers; i++) {
+            const div = document.createElement('div');
+            div.className = 'input-group';
+            div.innerHTML = `
+                <label>Jugador ${i + 1}:</label>
+                <input type="text" id="nameInput_${i}" value="${players[i].name !== `Jugador ${i+1}` ? players[i].name : ''}" placeholder="Jugador ${i + 1}">
+            `;
+            container.appendChild(div);
+        }
+    }
+
+    function goToScoreboard() {
+        for (let i = 0; i < numPlayers; i++) {
+            const inputVal = document.getElementById(`nameInput_${i}`).value.trim();
+            players[i].name = inputVal !== '' ? inputVal : `Jugador ${i+1}`;
+        }
+        renderScoreboard();
+        showScreen(3);
+    }
+
+    function renderScoreboard() {
+        const container = document.getElementById('scoreboardContainer');
+        container.innerHTML = '';
+        for (let i = 0; i < numPlayers; i++) {
+            const p = players[i];
+            const div = document.createElement('div');
+            div.className = 'player-row';
+            div.innerHTML = `
+                <div class="player-info">
+                    <div class="player-name">${p.name}</div>
+                    <div class="player-total">Total: <span>${p.score}</span></div>
+                </div>
+                <div>
+                    <input type="number" id="roundScore_${i}" class="round-input" placeholder="+ 0" autocomplete="off">
+                </div>
+            `;
+            container.appendChild(div);
+        }
+    }
+
+    function calculateScores() {
+        for (let i = 0; i < numPlayers; i++) {
+            const roundInput = document.getElementById(`roundScore_${i}`);
+            const roundPoints = parseInt(roundInput.value);
+            if (!isNaN(roundPoints)) {
+                players[i].score += roundPoints;
+            }
+        }
+        renderScoreboard();
+    }
+
+    function resetGame() {
+        if (confirm("¿Seguro que quieres volver al inicio? Se perderán los puntos.")) {
+            players = [];
+            numPlayers = 0;
+            showScreen(1);
+        }
+    }
+</script>
+</body>
+</html>
