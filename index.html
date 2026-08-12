@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tanteo App</title>
+    <style>
+        /* Ajustes para parecer app nativa */
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        
+        input {
+            -webkit-user-select: auto;
+            user-select: auto;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 { font-size: 24px; color: #2c3e50; margin-top: 0; }
+        h2 { font-size: 20px; color: #2c3e50; margin-top: 0; }
+        
+        .screen { display: none; }
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Interruptor / Switch */
+        .mode-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px 0 25px 0;
+            gap: 15px;
+            font-size: 24px;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 64px;
+            height: 34px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #95a5a6;
+            transition: .3s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px; width: 26px;
+            left: 4px; bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider { background-color: #3498db; }
+        input:checked + .slider:before { transform: translateX(30px); }
+
+        /* Botones generales */
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 14px 10px;
+            margin: 5px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:active { transform: scale(0.98); }
+        
+        .btn-small { padding: 10px; font-size: 14px; width: auto; margin: 0; }
+        .btn-secondary { background-color: #95a5a6; }
+        .btn-danger { background-color: #e74c3c; }
+        .btn-success { background-color: #2ecc71; font-size: 18px; margin-top: 20px; }
+        
+        .grid-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        /* Entradas de texto */
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #34495e; font-size: 14px; }
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        /* Fila de jugadores en puntuación */
+        .player-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 5px solid #3498db;
+        }
+        .player-info { text-align: left; flex-grow: 1; padding-right: 10px; }
+        .player-name { font-weight: bold; font-size: 16px; margin-bottom: 2px; }
+        .player-total { font-size: 13px; color: #7f8c8d; }
+        .player-total span { font-weight: bold; font-size: 20px; color: #2c3e50; }
+        
+        /* Controles de puntuación (Caja o Botones) */
+        .round-input {
+            width: 80px;
+            padding: 12px 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .quick-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            width: 160px;
+        }
+        .btn-quick {
+            padding: 10px 0;
+            font-size: 14px;
+            margin: 0;
+            border-radius: 6px;
+        }
+        .btn-blue { background-color: #3498db; }
+        .btn-red { background-color: #e74c3c; }
+        
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- PANTALLA 1: Inicio y Selección -->
+    <div id="screen1" class="screen active">
+        <h1>Tanteo</h1>
+        <p>Selecciona el modo de juego y los jugadores</p>
+        
+        <!-- Interruptor de modo -->
+        <div class="mode-toggle">
+            <span>🔲</span> <!-- Icono Caja de texto -->
+            <label class="switch">
+                <input type="checkbox" id="modeSwitch" onchange="toggleMode()">
+                <span class="slider"></span>
+            </label>
+            <span>🔘</span> <!-- Icono Botones rápidos -->
+        </div>
+
+        <div id="playerButtons" class="grid-buttons"></div>
+    </div>
+
+    <!-- PANTALLA 2: Nombres -->
+    <div id="screen2" class="screen">
+        <div class="header-actions">
+            <button class="btn-small btn-secondary" onclick="showScreen(1)">⬅ Atrás</button>
+        </div>
+        <h2>Nombres</h2>
+        <div id="namesContainer"></div>
+        <button class="btn-success" onclick="goToScoreboard()">Continuar ➡</button>
+    </div>
+
+    <!-- PANTALLA 3: Puntuaciones -->
+    <div id="screen3" class="screen">
+        <div class="header-actions">
+            <button class="btn-small btn-secondary" onclick="showScreen(2)">⬅ Atrás</button>
+            <button class="btn-small btn-danger" onclick="resetGame()">🏠 Inicio</button>
+        </div>
+        <h2>Puntuaciones</h2>
+        <div id="scoreboardContainer"></div>
+        <button id="calcButton" class="btn-success" onclick="calculateScores()">Calcular Ronda ➕</button>
+    </div>
+</div>
+
+<script>
+    let numPlayers = 0;
+    let players = [];
+    let isButtonMode = false;
+
+    window.onload = function() {
+        const buttonsContainer = document.getElementById('playerButtons');
+        for (let i = 2; i <= 12; i++) {
+            const btn = document.createElement('button');
+            btn.innerText = i + " Jugadores";
+            btn.onclick = () => selectNumPlayers(i);
+            buttonsContainer.appendChild(btn);
+        }
+    };
+
+    // Actualiza la variable según la posición del interruptor
+    function toggleMode() {
+        isButtonMode = document.getElementById('modeSwitch').checked;
+    }
+
+    function showScreen(screenNumber) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('screen' + screenNumber).classList.add('active');
+        window.scrollTo(0, 0); 
+    }
+
+    function selectNumPlayers(n) {
+        numPlayers = n;
+        if (players.length !== n) {
+            players = [];
+            for (let i = 0; i < n; i++) {
+                players.push({ name: `Jugador ${i+1}`, score: 0 });
+            }
+        }
+        renderNameInputs();
+        showScreen(2);
+    }
+
+    function renderNameInputs() {
+        const container = document.getElementById('namesContainer');
+        container.innerHTML = '';
+        for (let i = 0; i < numPlayers; i++) {
+            const div = document.createElement('div');
+            div.className = 'input-group';
+            div.innerHTML = `
+                <label>Jugador ${i + 1}:</label>
+                <input type="text" id="nameInput_${i}" value="${players[i].name !== `Jugador ${i+1}` ? players[i].name : ''}" placeholder="Jugador ${i + 1}">
+            `;
+            container.appendChild(div);
+        }
+    }
+
+    function goToScoreboard() {
+        for (let i = 0; i < numPlayers; i++) {
+            const inputVal = document.getElementById(`nameInput_${i}`).value.trim();
+            players[i].name = inputVal !== '' ? inputVal : `Jugador ${i+1}`;
+        }
+        renderScoreboard();
+        showScreen(3);
+    }
+
+    function renderScoreboard() {
+        const container = document.getElementById('scoreboardContainer');
+        container.innerHTML = '';
+        
+        for (let i = 0; i < numPlayers; i++) {
+            const p = players[i];
+            const div = document.createElement('div');
+            div.className = 'player-row';
+            
+            // Generar los controles dependiendo del modo elegido
+            let controlsHTML = '';
+            if (isButtonMode) {
+                controlsHTML = `
+                    <div class="quick-buttons">
+                        <button class="btn-quick btn-blue" onclick="addScore(${i}, 1)">+1</button>
+                        <button class="btn-quick btn-blue" onclick="addScore(${i}, 5)">+5</button>
+                        <button class="btn-quick btn-blue" onclick="addScore(${i}, 10)">+10</button>
+                        <button class="btn-quick btn-red" onclick="addScore(${i}, -1)">-1</button>
+                        <button class="btn-quick btn-red" onclick="addScore(${i}, -5)">-5</button>
+                        <button class="btn-quick btn-red" onclick="addScore(${i}, -10)">-10</button>
+                    </div>
+                `;
+            } else {
+                controlsHTML = `<input type="number" id="roundScore_${i}" class="round-input" placeholder="+ 0" autocomplete="off">`;
+            }
+
+            div.innerHTML = `
+                <div class="player-info">
+                    <div class="player-name">${p.name}</div>
+                    <div class="player-total">Total: <span id="displayScore_${i}">${p.score}</span></div>
+                </div>
+                <div>
+                    ${controlsHTML}
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        // Mostrar u ocultar el botón general de "Calcular Ronda"
+        document.getElementById('calcButton').style.display = isButtonMode ? 'none' : 'block';
+    }
+
+    // Función para el modo caja de texto
+    function calculateScores() {
+        for (let i = 0; i < numPlayers; i++) {
+            const roundInput = document.getElementById(`roundScore_${i}`);
+            const roundPoints = parseInt(roundInput.value);
+            if (!isNaN(roundPoints)) {
+                players[i].score += roundPoints;
+            }
+        }
+        renderScoreboard();
+    }
+
+    // Nueva función para el modo botones rápidos
+    function addScore(playerIndex, amount) {
+        players[playerIndex].score += amount;
+        // Actualizamos solo el número en pantalla al instante para no perder fluidez
+        document.getElementById(`displayScore_${playerIndex}`).innerText = players[playerIndex].score;
+    }
+
+    function resetGame() {
+        if (confirm("¿Seguro que quieres volver al inicio? Se perderán los puntos.")) {
+            players = [];
+            numPlayers = 0;
+            showScreen(1);
+        }
+    }
+</script>
+</body>
+</html>
